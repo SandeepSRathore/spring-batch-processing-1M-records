@@ -1,0 +1,8 @@
+target/
+data/*.csv
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

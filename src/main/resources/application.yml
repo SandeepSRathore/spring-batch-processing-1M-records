@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: transaction-import
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/txnimport}
+    username: ${DB_USER:txnimport}
+    password: ${DB_PASSWORD:txnimport}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 10000
+  batch:
+    job:
+      # Jobs are launched through the REST API, never automatically at startup.
+      enabled: false
+    jdbc:
+      # The Spring Batch schema is managed by Flyway (V1__spring_batch_schema.sql).
+      initialize-schema: never
+  flyway:
+    enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 60s
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+app:
+  import:
+    # Only files under this directory can be imported (guards against arbitrary file reads).
+    input-dir: ${IMPORT_INPUT_DIR:./data}
+    chunk-size: 1000
+    # Beyond this many bad rows in one run the job fails: the file is probably wrong as a whole.
+    skip-limit: 50000
+    # Concurrent imports (different files). The same file can never run twice at once.
+    max-concurrent-jobs: 2
+    progress-log-interval-chunks: 100
+    auto-restart:
+      # Restart a run that failed on a transient database/connection error from its last checkpoint.
+      enabled: true
+      max-attempts: 3
+      initial-backoff: 5s
+      multiplier: 2.0
+    # Executions left STARTED by a crashed process are marked FAILED at startup so they can be
+    # restarted. Only safe with a single application instance per database.
+    recover-stale-executions-on-startup: true
+
+logging:
+  level:
+    com.example.txnimport: INFO
